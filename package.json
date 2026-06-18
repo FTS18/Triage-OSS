@@ -1,9 +1,30 @@
 {
   "name": "triage-oss",
-  "displayName": "Triage-OSS",
-  "description": "Find, evaluate, and act on open source contributions without leaving VS Code.",
-  "version": "0.1.0",
-  "publisher": "dubey",
+  "displayName": "Triage: Open Source Issue Finder (OSS)",
+  "description": "Search GitHub issues, track PR activity, find good first issues and Google Summer of Code (GSoC) orgs directly inside VS Code.",
+  "version": "0.1.4",
+  "keywords": [
+    "github",
+    "open source",
+    "good first issue",
+    "triage",
+    "issues",
+    "gsoc",
+    "bounties"
+  ],
+  "publisher": "fts18",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FTS18/Triage-OSS"
+  },
+  "homepage": "https://github.com/FTS18/Triage-OSS#readme",
+  "bugs": {
+    "url": "https://github.com/FTS18/Triage-OSS/issues"
+  },
+  "author": {
+    "name": "Ananay Dubey (FTS18)",
+    "url": "https://ananay.netlify.app"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
