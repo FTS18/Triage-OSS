@@ -1,0 +1,643 @@
+{
+  "name": "triage-oss",
+  "displayName": "Triage-OSS",
+  "description": "Find, evaluate, and act on open source contributions without leaving VS Code.",
+  "version": "0.1.0",
+  "publisher": "dubey",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "issueFinder",
+          "title": "Triage-OSS",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "issueFinder": [
+        {
+          "id": "issueFinder.feed",
+          "name": "Issue Feed",
+          "icon": "$(rss)"
+        },
+        {
+          "id": "issueFinder.watchlist",
+          "name": "Watchlist",
+          "icon": "$(bookmark)"
+        },
+        {
+          "id": "issueFinder.dailyChallenge",
+          "name": "Daily Challenge",
+          "icon": "$(target)"
+        },
+        {
+          "id": "issueFinder.myActivity",
+          "name": "My Activity",
+          "icon": "$(graph)"
+        },
+        {
+          "id": "issueFinder.trending",
+          "name": "Trending & Hot",
+          "icon": "$(flame)"
+        },
+        {
+          "id": "issueFinder.settings",
+          "name": "Profile & Settings",
+          "type": "webview",
+          "icon": "$(gear)"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "issueFinder.refresh",
+          "when": "view == issueFinder.feed",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.configureFilters",
+          "when": "view == issueFinder.feed",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.openSettingsPanel",
+          "when": "view == issueFinder.feed",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.openSettingsPanel",
+          "when": "view == issueFinder.settings",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.roulette",
+          "when": "view == issueFinder.dailyChallenge",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.toggleCompactView",
+          "when": "view == issueFinder.feed",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.refreshActivity",
+          "when": "view == issueFinder.myActivity",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.refreshTrending",
+          "when": "view == issueFinder.trending",
+          "group": "navigation"
+        },
+        {
+          "command": "issueFinder.exportWatchlist",
+          "when": "view == issueFinder.watchlist",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "issueFinder.saveIssue",
+          "when": "viewItem == issue",
+          "group": "inline"
+        },
+        {
+          "command": "issueFinder.removeFromWatchlist",
+          "when": "viewItem == watchlistIssue",
+          "group": "inline"
+        },
+        {
+          "command": "issueFinder.jumpIn",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "inline"
+        },
+        {
+          "command": "issueFinder.openInCodespaces",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "1_launchers@1"
+        },
+        {
+          "command": "issueFinder.openInGitpod",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "1_launchers@2"
+        },
+        {
+          "command": "issueFinder.suggestBranch",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "2_workflow@1"
+        },
+        {
+          "command": "issueFinder.copyCommitMessage",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "2_workflow@2"
+        },
+        {
+          "command": "issueFinder.viewContributing",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "2_workflow@3"
+        },
+        {
+          "command": "issueFinder.generatePRChecklist",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "2_workflow@4"
+        },
+        {
+          "command": "issueFinder.estimateDiff",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "2_workflow@5"
+        },
+        {
+          "command": "issueFinder.findSimilarIssues",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "2_workflow@6"
+        },
+        {
+          "command": "issueFinder.checkPRStatus",
+          "when": "viewItem == issue || viewItem == watchlistIssue",
+          "group": "2_workflow@7"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "issueFinder.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "issueFinder.configureFilters",
+        "title": "Configure Filters",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "issueFinder.openSettingsPanel",
+        "title": "Configure Profile & Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "issueFinder.openIssue",
+        "title": "Triage-OSS: Open Issue"
+      },
+      {
+        "command": "issueFinder.saveIssue",
+        "title": "Save to Watchlist",
+        "icon": "$(bookmark)"
+      },
+      {
+        "command": "issueFinder.removeFromWatchlist",
+        "title": "Remove from Watchlist",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "issueFinder.jumpIn",
+        "title": "Fork and Clone",
+        "icon": "$(repo-forked)"
+      },
+      {
+        "command": "issueFinder.roulette",
+        "title": "New Challenge",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "issueFinder.searchError",
+        "title": "Triage-OSS: Search GitHub Issues for Error"
+      },
+      {
+        "command": "issueFinder.openInCodespaces",
+        "title": "Launch in Codespaces",
+        "icon": "$(github)"
+      },
+      {
+        "command": "issueFinder.openInGitpod",
+        "title": "Launch in Gitpod",
+        "icon": "$(globe)"
+      },
+      {
+        "command": "issueFinder.suggestBranch",
+        "title": "$(git-branch) Suggest Branch Name",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "issueFinder.copyCommitMessage",
+        "title": "$(clippy) Copy Commit Message",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "issueFinder.viewContributing",
+        "title": "$(book) View CONTRIBUTING.md",
+        "icon": "$(book)"
+      },
+      {
+        "command": "issueFinder.generatePRChecklist",
+        "title": "$(checklist) Generate PR Checklist",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "issueFinder.estimateDiff",
+        "title": "$(diff) Estimate Diff Size",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "issueFinder.findSimilarIssues",
+        "title": "$(search) Find Similar Issues",
+        "icon": "$(search)"
+      },
+      {
+        "command": "issueFinder.checkPRStatus",
+        "title": "$(git-pull-request) Check PR Status",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "issueFinder.exportWatchlist",
+        "title": "$(export) Export Watchlist",
+        "icon": "$(export)"
+      },
+      {
+        "command": "issueFinder.refreshActivity",
+        "title": "Refresh My Activity",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "issueFinder.refreshTrending",
+        "title": "Refresh Trending",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "issueFinder.toggleCompactView",
+        "title": "Toggle Compact View",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "issueFinder.linkBranchToIssue",
+        "title": "Triage-OSS: Link Current Branch to Issue"
+      }
+    ],
+    "configuration": {
+      "title": "Triage-OSS",
+      "properties": {
+        "issueFinder.githubToken": {
+          "type": "string",
+          "default": "",
+          "description": "Your GitHub Personal Access Token (PAT) with public_repo scope."
+        },
+        "issueFinder.githubUsername": {
+          "type": "string",
+          "default": "",
+          "description": "Your GitHub username. Used to automatically configure remotes when forking."
+        },
+        "issueFinder.rateLimitBuffer": {
+          "type": "number",
+          "default": 10,
+          "description": "Minimum remaining GitHub API credits before Triage-OSS pauses. Increase if you share a token across workspaces."
+        },
+        "issueFinder.filterKeyword": {
+          "type": "string",
+          "default": "",
+          "description": "Free-text keyword appended to every GitHub issue search query."
+        },
+        "issueFinder.filterTopics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Filter by GitHub repository topics (e.g. react, cli, api). Each entry becomes a topic:<tag> qualifier."
+        },
+        "issueFinder.filterIssueType": {
+          "type": "string",
+          "enum": [
+            "all",
+            "bug",
+            "feature",
+            "docs",
+            "test",
+            "performance",
+            "security"
+          ],
+          "enumDescriptions": [
+            "Show all issue types",
+            "Bugs, regressions and crashes",
+            "Enhancements and feature requests",
+            "Documentation and typo fixes",
+            "Test additions and improvements",
+            "Performance and optimization issues",
+            "Security vulnerabilities and CVEs"
+          ],
+          "default": "all",
+          "description": "Narrow results to a specific type of issue."
+        },
+        "issueFinder.filterExcludeKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Keywords to exclude from search results. Each becomes a -keyword qualifier."
+        },
+        "issueFinder.filterMaxRepoSizeKb": {
+          "type": "number",
+          "default": 0,
+          "description": "Maximum repository size in KB (0 = no limit). Smaller repos are easier to navigate as a new contributor."
+        },
+        "issueFinder.filterLicense": {
+          "type": "string",
+          "enum": [
+            "any",
+            "mit",
+            "apache-2.0",
+            "bsd-2-clause",
+            "bsd-3-clause",
+            "gpl-2.0",
+            "gpl-3.0",
+            "lgpl-2.1",
+            "mpl-2.0",
+            "isc"
+          ],
+          "default": "any",
+          "description": "Filter by repository license (SPDX identifier). 'any' disables this filter."
+        },
+        "issueFinder.filterMinActivityDays": {
+          "type": "number",
+          "default": 0,
+          "description": "Only show issues from repos that had a commit in the last N days. 0 = no limit."
+        },
+        "issueFinder.filterNoAssigneeStrict": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show truly unassigned issues (uses GitHub no:assignee qualifier)."
+        },
+        "issueFinder.filterSortBy": {
+          "type": "string",
+          "enum": [
+            "best-match",
+            "created",
+            "updated",
+            "reactions",
+            "comments"
+          ],
+          "enumDescriptions": [
+            "GitHub's default relevance ranking",
+            "Newest issues first",
+            "Recently updated issues first",
+            "Most reactions first",
+            "Most comments first"
+          ],
+          "default": "best-match",
+          "description": "How to sort issue results in the feed."
+        },
+        "issueFinder.compactView": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show Issue Feed in compact mode (shorter labels, less detail visible at once)."
+        },
+        "issueFinder.filterLanguages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "TypeScript"
+          ],
+          "description": "Programming languages to filter issues by (e.g. TypeScript, Python, Go)."
+        },
+        "issueFinder.filterLabelMode": {
+          "type": "string",
+          "enum": [
+            "help-wanted",
+            "good-first-issue",
+            "both"
+          ],
+          "default": "both",
+          "description": "Which GitHub label to search for."
+        },
+        "issueFinder.filterMinStars": {
+          "type": "number",
+          "default": 100,
+          "description": "Minimum repository star count to include."
+        },
+        "issueFinder.filterMaxAgeDays": {
+          "type": "number",
+          "default": 365,
+          "description": "Maximum issue age in days."
+        },
+        "issueFinder.filterOrgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "microsoft",
+            "google",
+            "facebook",
+            "apple",
+            "meta",
+            "amazon",
+            "aws",
+            "awslabs",
+            "netflix",
+            "uber",
+            "airbnb",
+            "twitter",
+            "linkedin",
+            "ibm",
+            "intel",
+            "nvidia",
+            "salesforce",
+            "adobe",
+            "nodejs",
+            "golang",
+            "rust-lang",
+            "denoland",
+            "bun-sh",
+            "expressjs",
+            "fastify",
+            "nestproject",
+            "apache",
+            "mozilla",
+            "torvalds",
+            "electron",
+            "github",
+            "vuejs",
+            "angular",
+            "vercel",
+            "sveltejs",
+            "vitejs",
+            "webpack",
+            "babel",
+            "eslint",
+            "prettier",
+            "rollup",
+            "prisma",
+            "supabase",
+            "docker",
+            "kubernetes",
+            "hashicorp",
+            "elastic",
+            "cloudflare",
+            "grafana",
+            "prometheus",
+            "tailscale",
+            "postmanlabs",
+            "redis",
+            "mongodb",
+            "tensorflow",
+            "pytorch",
+            "openai",
+            "huggingface"
+          ],
+          "description": "Limit Issue Feed to specific GitHub orgs/users (leave empty for global search)."
+        },
+        "issueFinder.globalSearch": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, Issue Feed searches globally across all repositories instead of limiting to selected orgs."
+        },
+        "issueFinder.challengeOrgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "microsoft",
+            "google",
+            "facebook",
+            "apple",
+            "meta",
+            "amazon",
+            "aws",
+            "awslabs",
+            "netflix",
+            "uber",
+            "airbnb",
+            "twitter",
+            "linkedin",
+            "ibm",
+            "intel",
+            "nvidia",
+            "salesforce",
+            "adobe",
+            "nodejs",
+            "golang",
+            "rust-lang",
+            "denoland",
+            "bun-sh",
+            "expressjs",
+            "fastify",
+            "nestproject",
+            "apache",
+            "mozilla",
+            "torvalds",
+            "electron",
+            "github",
+            "vuejs",
+            "angular",
+            "vercel",
+            "sveltejs",
+            "vitejs",
+            "webpack",
+            "babel",
+            "eslint",
+            "prettier",
+            "rollup",
+            "prisma",
+            "supabase",
+            "docker",
+            "kubernetes",
+            "hashicorp",
+            "elastic",
+            "cloudflare",
+            "grafana",
+            "prometheus",
+            "tailscale",
+            "postmanlabs",
+            "redis",
+            "mongodb",
+            "tensorflow",
+            "pytorch",
+            "openai",
+            "huggingface"
+          ],
+          "description": "Pool of GitHub orgs/users used for the Daily Challenge roulette. Remove orgs you don't care about, or add your own."
+        },
+        "issueFinder.bigTechMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Deprecated — please use globalSearch and filterOrgs (for Issue Feed) or challengeOrgs (for Daily Challenge) instead."
+        },
+        "issueFinder.niche.ghostedMaxComments": {
+          "type": "integer",
+          "default": 1,
+          "description": "Max comments to consider an issue 'Ghosted'."
+        },
+        "issueFinder.intelligence.hardStarThreshold": {
+          "type": "integer",
+          "default": 50000,
+          "description": "Star count threshold for 'Hard' difficulty."
+        },
+        "issueFinder.intelligence.mediumStarThreshold": {
+          "type": "integer",
+          "default": 5000,
+          "description": "Star count threshold for 'Medium' difficulty."
+        },
+        "issueFinder.intelligence.hardBodyLength": {
+          "type": "integer",
+          "default": 2000,
+          "description": "Body length threshold for 'Hard' difficulty."
+        },
+        "issueFinder.intelligence.mediumBodyLength": {
+          "type": "integer",
+          "default": 500,
+          "description": "Body length threshold for 'Medium' difficulty."
+        },
+        "issueFinder.intelligence.quickWinMaxBodyLength": {
+          "type": "integer",
+          "default": 800,
+          "description": "Max body length for 'Quick Win' badge."
+        },
+        "issueFinder.cacheSeconds": {
+          "type": "number",
+          "default": 300,
+          "description": "How long to cache results in seconds."
+        },
+        "issueFinder.hacktoberfestMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, prioritizes issues with the 'hacktoberfest' label."
+        },
+        "issueFinder.quickWinMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, prioritizes issues estimated to take less than 2 hours to solve (Quick Wins)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "node ./out/test/runTest.js",
+    "package": "npx @vscode/vsce package",
+    "publish": "npx @vscode/vsce publish"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^2.3.0",
+    "mocha": "^10.0.0",
+    "typescript": "^5.3.0"
+  }
+}
