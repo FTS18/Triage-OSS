@@ -2,7 +2,7 @@
   "name": "triage-oss",
   "displayName": "Triage: Open Source Issue Finder (OSS)",
   "description": "Search GitHub issues, track PR activity, find good first issues and Google Summer of Code (GSoC) orgs directly inside VS Code.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "keywords": [
     "github",
     "open source",
