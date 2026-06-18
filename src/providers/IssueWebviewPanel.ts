@@ -1,12 +1,15 @@
 import * as vscode from 'vscode';
-import { Issue } from '../domain/types';
+import { Issue, IssueComment } from '../domain/types';
+import { IssueRepository } from '../repositories/IssueRepository';
 
 export class IssueWebviewPanel {
     private static instance: IssueWebviewPanel | undefined;
     private readonly panel: vscode.WebviewPanel;
     private currentIssue?: Issue;
+    private repo?: IssueRepository;
 
-    private constructor(context: vscode.ExtensionContext) {
+    private constructor(context: vscode.ExtensionContext, repo: IssueRepository) {
+        this.repo = repo;
         this.panel = vscode.window.createWebviewPanel(
             'issueFinder.detail',
             'Issue Detail',
@@ -23,21 +26,34 @@ export class IssueWebviewPanel {
         }, undefined, context.subscriptions);
     }
 
-    static show(issue: Issue, context: vscode.ExtensionContext): void {
+    static async show(issue: Issue, context: vscode.ExtensionContext, repo: IssueRepository): Promise<void> {
         if (!IssueWebviewPanel.instance) {
-            IssueWebviewPanel.instance = new IssueWebviewPanel(context);
+            IssueWebviewPanel.instance = new IssueWebviewPanel(context, repo);
         }
-        IssueWebviewPanel.instance.render(issue);
         IssueWebviewPanel.instance.panel.reveal(vscode.ViewColumn.Beside);
+        IssueWebviewPanel.instance.renderLoading(issue);
+        
+        try {
+            const comments = await repo.getIssueComments(issue.id);
+            IssueWebviewPanel.instance.render(issue, comments);
+        } catch (e) {
+            vscode.window.showErrorMessage('Failed to load comments.');
+            IssueWebviewPanel.instance.render(issue, []);
+        }
     }
 
-    private render(issue: Issue): void {
+    private renderLoading(issue: Issue): void {
         this.currentIssue = issue;
         this.panel.title = `#${issue.number} · ${issue.repo.name}`;
-        this.panel.webview.html = this.buildHtml(issue);
+        this.panel.webview.html = this.buildHtml(issue, null);
     }
 
-    private handleMessage(msg: { command: string; url?: string }): void {
+    private render(issue: Issue, comments: IssueComment[]): void {
+        this.currentIssue = issue;
+        this.panel.webview.html = this.buildHtml(issue, comments);
+    }
+
+    private async handleMessage(msg: { command: string; url?: string; text?: string }): Promise<void> {
         if (msg.command === 'openBrowser' && msg.url) {
             vscode.env.openExternal(vscode.Uri.parse(msg.url));
         }
@@ -47,9 +63,18 @@ export class IssueWebviewPanel {
         if (msg.command === 'save' && this.currentIssue) {
             vscode.commands.executeCommand('issueFinder.saveIssue', this.currentIssue);
         }
+        if (msg.command === 'addComment' && this.currentIssue && msg.text && this.repo) {
+            try {
+                const newComment = await this.repo.addComment(this.currentIssue.id, msg.text);
+                this.panel.webview.postMessage({ command: 'commentAdded', comment: newComment });
+            } catch (e: any) {
+                vscode.window.showErrorMessage(`Failed to post comment: ${e.message}`);
+                this.panel.webview.postMessage({ command: 'commentError' });
+            }
+        }
     }
 
-    private buildHtml(issue: Issue): string {
+    private buildHtml(issue: Issue, comments: IssueComment[] | null): string {
         const health = issue.repo.health;
         const mergeClass = !health 
             ? 'health-unknown' 
@@ -394,6 +419,11 @@ export class IssueWebviewPanel {
     font-size: 0.95em;
   }
   
+  .body img {
+    max-width: 100%;
+    height: auto;
+  }
+  
   /* Actions/Buttons Container */
   .actions {
     display: flex;
@@ -533,10 +563,52 @@ export class IssueWebviewPanel {
     <div class="body">${issue.bodyText || 'No description provided.'}</div>
   </div>
 
+  ${comments === null ? `
+  <div style="text-align: center; margin: 32px 0; color: var(--vscode-descriptionForeground);">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+    </svg>
+    <div style="margin-top: 8px;">Loading comments...</div>
+    <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+  </div>
+  ` : `
+  <div class="comments-section" style="margin-top: 32px;">
+    <h3 style="margin-bottom: 16px;">Comments (${comments.length})</h3>
+    <div id="comments-container">
+      ${comments.map(c => `
+      <div class="comment" style="display: flex; margin-bottom: 24px;">
+        <img src="${c.author.avatarUrl}" alt="${c.author.login}" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; background-color: white;">
+        <div style="flex: 1; border: 1px solid var(--vscode-widget-border); border-radius: 6px; overflow: hidden;">
+          <div style="background-color: var(--vscode-editorWidget-background); padding: 8px 12px; border-bottom: 1px solid var(--vscode-widget-border); color: var(--vscode-descriptionForeground); font-size: 0.9em;">
+            <strong>${c.author.login}</strong> commented on ${new Date(c.createdAt).toLocaleDateString()}
+          </div>
+          <div class="body" style="padding: 12px; border: none; border-radius: 0;">${c.bodyHTML}</div>
+        </div>
+      </div>
+      `).join('')}
+    </div>
+
+    <!-- Reply Box -->
+    <div class="reply-box" style="display: flex; margin-top: 24px; border-top: 1px solid var(--vscode-widget-border); padding-top: 24px;">
+      <div style="flex: 1; border: 1px solid var(--vscode-widget-border); border-radius: 6px; overflow: hidden;">
+        <div style="background-color: var(--vscode-editorWidget-background); padding: 8px 12px; border-bottom: 1px solid var(--vscode-widget-border); font-weight: 600;">
+          Add a comment
+        </div>
+        <textarea id="reply-input" placeholder="Leave a comment (markdown supported)..." style="width: 100%; min-height: 100px; padding: 12px; border: none; background-color: var(--vscode-input-background); color: var(--vscode-input-foreground); font-family: inherit; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
+        <div style="padding: 8px 12px; background-color: var(--vscode-editorWidget-background); border-top: 1px solid var(--vscode-widget-border); display: flex; justify-content: flex-end;">
+          <button id="reply-btn" class="btn-primary" style="display: flex; align-items: center;" onclick="submitComment()">
+            Comment
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  `}
+
   <!-- Actions -->
-  <div class="actions">
-    <button class="btn-primary" onclick="post('openBrowser','${issue.url}')">${iconGithub}Open on GitHub</button>
-    <button class="btn-primary" onclick="post('jumpIn','${issue.url}')">${iconFork}Jump In</button>
+  <div class="actions" style="margin-top: 32px;">
+    <button class="btn-secondary" onclick="post('openBrowser','${issue.url}')">${iconGithub}Open on GitHub</button>
+    <button class="btn-secondary" onclick="post('jumpIn','${issue.url}')">${iconFork}Jump In</button>
     <button class="btn-secondary" onclick="post('save','${issue.url}')">${iconBookmark}Save to Watchlist</button>
   </div>
 </div>
@@ -545,6 +617,49 @@ export class IssueWebviewPanel {
   const vscode = acquireVsCodeApi();
   function post(command, url) { vscode.postMessage({ command, url }); }
   
+  function submitComment() {
+    const input = document.getElementById('reply-input');
+    const btn = document.getElementById('reply-btn');
+    const text = input.value.trim();
+    if (!text) return;
+
+    btn.disabled = true;
+    btn.innerText = 'Posting...';
+    vscode.postMessage({ command: 'addComment', text });
+  }
+
+  window.addEventListener('message', event => {
+    const message = event.data;
+    if (message.command === 'commentAdded') {
+      const container = document.getElementById('comments-container');
+      const c = message.comment;
+      
+      const div = document.createElement('div');
+      div.className = 'comment';
+      div.style.cssText = 'display: flex; margin-bottom: 24px;';
+      div.innerHTML = \`
+        <img src="\${c.author.avatarUrl}" alt="\${c.author.login}" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; background-color: white;">
+        <div style="flex: 1; border: 1px solid var(--vscode-widget-border); border-radius: 6px; overflow: hidden;">
+          <div style="background-color: var(--vscode-editorWidget-background); padding: 8px 12px; border-bottom: 1px solid var(--vscode-widget-border); color: var(--vscode-descriptionForeground); font-size: 0.9em;">
+            <strong>\${c.author.login}</strong> commented just now
+          </div>
+          <div class="body" style="padding: 12px; border: none; border-radius: 0;">\${c.bodyHTML}</div>
+        </div>
+      \`;
+      container.appendChild(div);
+      
+      const input = document.getElementById('reply-input');
+      const btn = document.getElementById('reply-btn');
+      input.value = '';
+      btn.disabled = false;
+      btn.innerText = 'Comment';
+    } else if (message.command === 'commentError') {
+      const btn = document.getElementById('reply-btn');
+      btn.disabled = false;
+      btn.innerText = 'Comment';
+    }
+  });
+
   // Force reset scroll position on every load to fix re-use scroll restoration bug
   window.scrollTo(0, 0);
 </script>

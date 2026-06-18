@@ -15,6 +15,16 @@ export interface Issue {
     intelligence?: IssueIntelligence;
 }
 
+export interface IssueComment {
+    id: string;
+    bodyHTML: string;
+    createdAt: string;
+    author: {
+        login: string;
+        avatarUrl: string;
+    };
+}
+
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
 export interface IssueIntelligence {

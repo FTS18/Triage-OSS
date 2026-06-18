@@ -260,7 +260,7 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
 
         vscode.commands.registerCommand('issueFinder.openIssue', (issue: Issue) => {
-            IssueWebviewPanel.show(issue, context);
+            IssueWebviewPanel.show(issue, context, issueRepo);
         }),
 
         vscode.commands.registerCommand('issueFinder.configureFilters', async () => {
@@ -287,7 +287,8 @@ export function activate(context: vscode.ExtensionContext): void {
             void refreshFeed();
         }),
 
-        vscode.commands.registerCommand('issueFinder.saveIssue', (issue: Issue) => {
+        vscode.commands.registerCommand('issueFinder.saveIssue', (issueOrItem: Issue | { issue: Issue }) => {
+            const issue = resolveIssue(issueOrItem);
             if (!issue) { return; }
             const saved: string[] = context.globalState.get('watchlist', []);
             if (!saved.includes(issue.url)) {
@@ -301,8 +302,9 @@ export function activate(context: vscode.ExtensionContext): void {
             });
         }),
 
-        vscode.commands.registerCommand('issueFinder.removeFromWatchlist', (item: { issue: Issue }) => {
-            const url = item?.issue?.url;
+        vscode.commands.registerCommand('issueFinder.removeFromWatchlist', (issueOrItem: Issue | { issue: Issue }) => {
+            const issue = resolveIssue(issueOrItem);
+            const url = issue?.url;
             if (!url) { return; }
             const saved: string[] = context.globalState.get('watchlist', []);
             const updated = saved.filter(u => u !== url);
@@ -454,8 +456,8 @@ export function activate(context: vscode.ExtensionContext): void {
                         issue: s,
                     }));
                     const picked = await vscode.window.showQuickPick(picks, { placeHolder: 'Select an issue to open' });
-                    if (picked) {
-                        IssueWebviewPanel.show(picked.issue, context);
+                    if (picked && picked.issue) {
+                        IssueWebviewPanel.show(picked.issue, context, issueRepo);
                     }
                 });
             }
@@ -500,7 +502,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
             const linked = allIssues.find(i => i.number === issueNumber);
             if (linked) {
-                IssueWebviewPanel.show(linked, context);
+                IssueWebviewPanel.show(linked, context, issueRepo);
             } else {
                 vscode.window.showInformationMessage(
                     `Issue #${issueNumber} linked to branch "${branch}" — opening on GitHub.`,

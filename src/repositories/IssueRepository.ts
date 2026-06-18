@@ -260,6 +260,57 @@ export class IssueRepository {
         }
     }
 
+    async getIssueComments(issueId: string): Promise<import('../domain/types').IssueComment[]> {
+        const gql = `
+            query($id: ID!) {
+                node(id: $id) {
+                    ... on Issue {
+                        comments(first: 50) {
+                            nodes {
+                                id
+                                bodyHTML
+                                createdAt
+                                author { login avatarUrl }
+                            }
+                        }
+                    }
+                }
+            }
+        `;
+        const data = await this.client.query<{ node: { comments: { nodes: any[] } } }>(gql, { id: issueId });
+        return data.node.comments.nodes.map(n => ({
+            id: n.id,
+            bodyHTML: n.bodyHTML,
+            createdAt: n.createdAt,
+            author: n.author || { login: 'Ghost', avatarUrl: 'https://github.com/ghost.png' }
+        }));
+    }
+
+    async addComment(issueId: string, body: string): Promise<import('../domain/types').IssueComment> {
+        const gql = `
+            mutation($subjectId: ID!, $body: String!) {
+                addComment(input: {subjectId: $subjectId, body: $body}) {
+                    commentEdge {
+                        node {
+                            id
+                            bodyHTML
+                            createdAt
+                            author { login avatarUrl }
+                        }
+                    }
+                }
+            }
+        `;
+        const data = await this.client.query<{ addComment: { commentEdge: { node: any } } }>(gql, { subjectId: issueId, body });
+        const n = data.addComment.commentEdge.node;
+        return {
+            id: n.id,
+            bodyHTML: n.bodyHTML,
+            createdAt: n.createdAt,
+            author: n.author || { login: 'Ghost', avatarUrl: 'https://github.com/ghost.png' }
+        };
+    }
+
     /** Returns the number of issues to fetch health for — used in extension.ts. */
     static get healthFetchLimit(): number {
         return DEFAULTS.healthFetchLimit;
